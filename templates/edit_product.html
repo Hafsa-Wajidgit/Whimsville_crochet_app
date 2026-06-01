@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Edit Product{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="breadcrumb">Catalog <span>/ Edit Product</span></div>
+  <h1><span class="page-icon">✏️</span> Edit Product</h1>
+  <p class="page-subtitle">Refine the details of <em>"{{ product.title }}"</em></p>
+</div>
+
+<div class="card form-section">
+  <form method="POST" action="{{ url_for('update_product', pid=product.product_id) }}">
+    <div class="form-grid">
+
+      <div class="form-group full-width">
+        <label>Product Title <span class="required">*</span></label>
+        <input type="text" name="title" value="{{ product.title }}" required>
+      </div>
+
+      <div class="form-group">
+        <label>Category <span class="required">*</span></label>
+        <select name="category" required>
+          {% for cat in ['Plushies', 'Cardigans', 'Cozies', 'Accessories', 'Home Décor', 'Seasonal', 'Other'] %}
+          <option value="{{ cat }}" {% if product.category == cat %}selected{% endif %}>{{ cat }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Price (£) <span class="required">*</span></label>
+        <input type="number" name="price" step="0.01" min="0.01"
+               value="{{ product.price }}" required>
+      </div>
+
+      <div class="form-group">
+        <label>Total Quantity <span class="required">*</span></label>
+        <input type="number" name="quantity" min="0"
+               value="{{ product.quantity }}" required>
+      </div>
+
+      <div class="form-group">
+        <label>Currently Available</label>
+        <input type="text" value="{{ product.available }}" disabled
+               style="background: rgba(153,186,185,0.1); color: var(--ash);">
+        <p class="text-muted mt-1" style="font-size:0.78rem;">
+          Adjusted automatically when quantity changes.
+        </p>
+      </div>
+
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-success">✓ Save Changes</button>
+      <a href="{{ url_for('catalog') }}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

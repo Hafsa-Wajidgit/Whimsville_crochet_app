@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<div class="dashboard-hero">
+  <h1>Good day, dear maker ✿</h1>
+  <p>Here is your business at a glance — every stitch, every smile, every sale.</p>
+</div>
+
+<!-- Stats -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-icon pink-bg">👥</div>
+    <div class="stat-info">
+      <div class="stat-number">{{ member_count }}</div>
+      <div class="stat-label">Members</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon sand-bg">🧶</div>
+    <div class="stat-info">
+      <div class="stat-number">{{ product_count }}</div>
+      <div class="stat-label">Products</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon green-bg">🛍️</div>
+    <div class="stat-info">
+      <div class="stat-number">{{ order_count }}</div>
+      <div class="stat-label">Orders</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon ash-bg">⚠️</div>
+    <div class="stat-info">
+      <div class="stat-number">{{ low_stock }}</div>
+      <div class="stat-label">Low Stock</div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="section-header">
+  <h2>Quick Actions</h2>
+</div>
+<div class="quick-actions mb-3">
+  <a href="{{ url_for('add_member_form') }}" class="quick-action-card">
+    <span class="qa-icon">✨</span>
+    <span class="qa-label">Add Member</span>
+  </a>
+  <a href="{{ url_for('add_product_form') }}" class="quick-action-card">
+    <span class="qa-icon">🌸</span>
+    <span class="qa-label">Add Product</span>
+  </a>
+  <a href="{{ url_for('order_form') }}" class="quick-action-card">
+    <span class="qa-icon">🛒</span>
+    <span class="qa-label">New Order</span>
+  </a>
+  <a href="{{ url_for('catalog') }}" class="quick-action-card">
+    <span class="qa-icon">🧺</span>
+    <span class="qa-label">View Catalog</span>
+  </a>
+  <a href="{{ url_for('view_members') }}" class="quick-action-card">
+    <span class="qa-icon">📖</span>
+    <span class="qa-label">Directory</span>
+  </a>
+  <a href="{{ url_for('view_orders') }}" class="quick-action-card">
+    <span class="qa-icon">📋</span>
+    <span class="qa-label">Order Ledger</span>
+  </a>
+</div>
+
+<!-- Recent Orders -->
+<div class="section-header">
+  <h2>Recent Orders</h2>
+  <a href="{{ url_for('view_orders') }}" class="btn btn-secondary btn-sm">View all →</a>
+</div>
+
+{% if recent_orders %}
+<div class="table-container">
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Customer</th>
+        <th>Product</th>
+        <th>Qty</th>
+        <th>Total</th>
+        <th>Date</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for o in recent_orders %}
+      <tr>
+        <td><span class="id-chip">#{{ o.order_id }}</span></td>
+        <td>{{ o.name }}</td>
+        <td>{{ o.title }}</td>
+        <td>{{ o.quantity_ordered }}</td>
+        <td class="price-tag">£{{ "%.2f"|format(o.total_price) }}</td>
+        <td class="text-muted">{{ o.order_date[:16] }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card">
+  <div class="empty-state">
+    <span class="empty-icon">🛍️</span>
+    <h3>No orders yet</h3>
+    <p>Place your first order to see it here.</p>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

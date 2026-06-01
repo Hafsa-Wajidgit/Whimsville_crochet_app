@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Place Order{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="breadcrumb">Orders <span>/ New Order</span></div>
+  <h1><span class="page-icon">🛍️</span> Place an Order</h1>
+  <p class="page-subtitle">Select a member and a product to create a transaction.</p>
+</div>
+
+<div class="card form-section">
+  <form method="POST" action="{{ url_for('create_order') }}" id="orderForm">
+    <div class="form-grid">
+
+      <div class="form-group full-width">
+        <label>Customer Member <span class="required">*</span></label>
+        <select name="user_id" id="memberSelect" required>
+          <option value="" disabled selected>— Choose a member —</option>
+          {% for m in members %}
+          <option value="{{ m.user_id }}">{{ m.name }}</option>
+          {% endfor %}
+        </select>
+        {% if not members %}
+        <p class="text-muted mt-1" style="font-size:0.8rem; color: #a05050;">
+          No members registered yet.
+          <a href="{{ url_for('add_member_form') }}">Add one first →</a>
+        </p>
+        {% endif %}
+      </div>
+
+      <div class="form-group full-width">
+        <label>Product <span class="required">*</span></label>
+        <select name="product_id" id="productSelect" required onchange="updatePreview()">
+          <option value="" disabled selected>— Choose a product —</option>
+          {% for p in products %}
+          <option value="{{ p.product_id }}"
+                  data-price="{{ p.price }}"
+                  data-available="{{ p.available }}">
+            {{ p.title }} — £{{ "%.2f"|format(p.price) }}
+            ({{ p.available }} available)
+          </option>
+          {% endfor %}
+        </select>
+        {% if not products %}
+        <p class="text-muted mt-1" style="font-size:0.8rem; color: #a05050;">
+          No in-stock products available.
+          <a href="{{ url_for('add_product_form') }}">Add stock first →</a>
+        </p>
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label>Quantity <span class="required">*</span></label>
+        <input type="number" name="quantity_ordered" id="qtyInput"
+               min="1" value="1" required oninput="updatePreview()">
+      </div>
+
+    </div>
+
+    <!-- Live Order Summary -->
+    <div class="order-summary-preview" id="orderPreview">
+      <h4>✿ Order Summary</h4>
+      <div class="order-summary-row">
+        <span>Product</span>
+        <span id="previewProduct">—</span>
+      </div>
+      <div class="order-summary-row">
+        <span>Unit Price</span>
+        <span id="previewPrice">—</span>
+      </div>
+      <div class="order-summary-row">
+        <span>Quantity</span>
+        <span id="previewQty">—</span>
+      </div>
+      <div class="order-summary-row">
+        <span>Order Total</span>
+        <span id="previewTotal">—</span>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary"
+              {% if not members or not products %}disabled style="opacity:0.5;"{% endif %}>
+        🛍️ Confirm Order
+      </button>
+      <a href="{{ url_for('view_orders') }}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+function updatePreview() {
+  const sel = document.getElementById('productSelect');
+  const qty = parseInt(document.getElementById('qtyInput').value) || 0;
+  const opt = sel.options[sel.selectedIndex];
+
+  if (!opt || !opt.value) {
+    document.getElementById('orderPreview').classList.remove('visible');
+    return;
+  }
+
+  const price = parseFloat(opt.dataset.price);
+  const productName = opt.text.split(' — ')[0];
+  const total = (price * qty).toFixed(2);
+
+  document.getElementById('previewProduct').textContent = productName;
+  document.getElementById('previewPrice').textContent = '£' + price.toFixed(2);
+  document.getElementById('previewQty').textContent = qty;
+  document.getElementById('previewTotal').textContent = '£' + total;
+
+  document.getElementById('orderPreview').classList.add('visible');
+}
+</script>
+{% endblock %}
