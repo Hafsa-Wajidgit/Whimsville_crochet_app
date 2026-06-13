@@ -9,7 +9,7 @@
 </div>
 
 <div class="card form-section">
-  <form method="POST" action="{{ url_for('create_product') }}">
+  <form method="POST" action="{{ url_for('create_product') }}" enctype="multipart/form-data">
     <div class="form-grid">
 
       <div class="form-group full-width">
@@ -38,7 +38,7 @@
       </div>
 
       <div class="form-group">
-        <label>Price (£) <span class="required">*</span></label>
+        <label>Price <span class="required">*</span></label>
         <input type="number" name="price" step="0.01" min="0.01" placeholder="0.00"
                value="{{ prefill.price if prefill else '' }}" required>
       </div>
@@ -49,6 +49,19 @@
                value="{{ prefill.quantity if prefill else '' }}" required>
       </div>
 
+      <div class="form-group full-width">
+        <label>Product Image <span class="text-muted" style="font-size:0.8rem;">(optional — JPG, PNG, GIF, WebP)</span></label>
+        <div class="image-upload-area" id="uploadArea">
+          <input type="file" name="image" id="imageInput" accept="image/*" onchange="previewImage(event)">
+          <div class="upload-placeholder" id="uploadPlaceholder">
+            <span style="font-size:2rem;">🖼️</span>
+            <p>Click or drag an image here</p>
+            <p class="text-muted" style="font-size:0.78rem;">PNG, JPG, GIF, WebP up to 5MB</p>
+          </div>
+          <img id="imagePreview" src="" alt="Preview" style="display:none; max-width:100%; max-height:220px; border-radius:10px; object-fit:cover;">
+        </div>
+      </div>
+
     </div>
 
     <div class="form-actions">
@@ -57,4 +70,19 @@
     </div>
   </form>
 </div>
+<script>
+function previewImage(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const preview = document.getElementById('imagePreview');
+    const placeholder = document.getElementById('uploadPlaceholder');
+    preview.src = e.target.result;
+    preview.style.display = 'block';
+    placeholder.style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+</script>
 {% endblock %}

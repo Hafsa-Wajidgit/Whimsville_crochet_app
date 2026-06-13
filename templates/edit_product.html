@@ -9,7 +9,7 @@
 </div>
 
 <div class="card form-section">
-  <form method="POST" action="{{ url_for('update_product', pid=product.product_id) }}">
+  <form method="POST" action="{{ url_for('update_product', pid=product.product_id) }}" enctype="multipart/form-data">
     <div class="form-grid">
 
       <div class="form-group full-width">
@@ -27,7 +27,7 @@
       </div>
 
       <div class="form-group">
-        <label>Price (£) <span class="required">*</span></label>
+        <label>Price (PKR) <span class="required">*</span></label>
         <input type="number" name="price" step="0.01" min="0.01"
                value="{{ product.price }}" required>
       </div>
@@ -47,7 +47,46 @@
         </p>
       </div>
 
-    </div>
+      <!-- ── Product Image ── -->
+      <div class="form-group full-width">
+        <label>Product Image
+          <span class="text-muted" style="font-size:0.8rem;">(optional — leave blank to keep current)</span>
+        </label>
+
+        {% if product.image_path %}
+        <!-- Current image preview -->
+        <div class="current-image-wrap">
+          <p class="text-muted" style="font-size:0.8rem; margin-bottom:6px;">Current image:</p>
+          <img src="{{ url_for('static', filename=product.image_path) }}"
+               alt="Current product image" class="current-img-thumb" id="currentThumb">
+        </div>
+        {% endif %}
+
+        <!-- Upload / Change area (hidden by default if image exists) -->
+        <div class="image-upload-area {% if product.image_path %}upload-collapsed{% endif %}"
+             id="uploadArea">
+          <input type="file" name="image" id="imageInput"
+                 accept="image/*" onchange="previewImage(event)">
+          <div class="upload-placeholder" id="uploadPlaceholder">
+            <span style="font-size:2rem;">🖼️</span>
+            <p>Click or drag a new image here</p>
+            <p class="text-muted" style="font-size:0.78rem;">PNG, JPG, GIF, WebP</p>
+          </div>
+          <img id="imagePreview" src="" alt="Preview"
+               style="display:none; max-width:100%; max-height:220px; border-radius:10px; object-fit:cover;">
+        </div>
+
+        <!-- Action buttons below image -->
+        <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
+          {% if product.image_path %}
+          <button type="button" class="btn btn-secondary btn-sm" onclick="toggleUpload()">
+            🔄 Change Image
+          </button>
+          {% endif %}
+        </div>
+      </div>
+
+    </div><!-- end form-grid -->
 
     <div class="form-actions">
       <button type="submit" class="btn btn-success">✓ Save Changes</button>
@@ -55,4 +94,40 @@
     </div>
   </form>
 </div>
+
+{% if product.image_path %}
+<!-- Delete Image is a SEPARATE form (cannot nest forms in HTML) -->
+<div style="margin-top: 12px; padding: 0 2px;">
+  <form method="POST" action="{{ url_for('delete_product_image', pid=product.product_id) }}"
+        onsubmit="return confirm('Permanently remove the image for this product?')">
+    <button type="submit" class="btn btn-danger btn-sm">🗑 Delete Image</button>
+  </form>
+</div>
+{% endif %}
+
+<script>
+// Toggle the upload area open/closed when "Change Image" is clicked
+function toggleUpload() {
+  const area = document.getElementById('uploadArea');
+  area.classList.toggle('upload-collapsed');
+}
+
+// Show a live preview once a file is chosen
+function previewImage(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const preview = document.getElementById('imagePreview');
+    const placeholder = document.getElementById('uploadPlaceholder');
+    // Update the current thumb too so user sees the replacement instantly
+    const thumb = document.getElementById('currentThumb');
+    if (thumb) thumb.src = e.target.result;
+    preview.src = e.target.result;
+    preview.style.display = 'block';
+    placeholder.style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+</script>
 {% endblock %}

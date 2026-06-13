@@ -1,89 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}Thread & Bloom{% endblock %} — Thread & Bloom</title>
+  <title>{% block title %}Whimsville{% endblock %} — Whimsville</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
+
 <body>
-<div class="page-wrapper">
+  <div class="page-wrapper">
 
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="sidebar-brand">
-      <span class="brand-icon">🧶</span>
-      <h2>Whimsville</h2>
-      <p>the yarns are fairies spun, the weaving done by nymphs</p>
-    </div>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <a href="{{ url_for('dashboard') }}" class="brand-logo-link">
+          <img src="{{ url_for('static', filename='images/logo.png') }}"
+               alt="Whimsville Logo" class="brand-logo"
+               onerror="this.style.display='none'; document.getElementById('brand-emoji').style.display='block'">
+          <span class="brand-icon" id="brand-emoji" style="display:none;">🧶</span>
+        </a>
+        <h2>Whimsville</h2>
+        <p>the yarns are fairies spun, the weaving done by nymphs</p>
+      </div>
 
-    <nav>
-      <div class="sidebar-divider">Navigate</div>
+      <nav>
+        <div class="sidebar-divider">Navigate</div>
 
-      <a href="{{ url_for('dashboard') }}"
-         class="{% if request.endpoint == 'dashboard' %}active{% endif %}">
-        <span class="nav-icon">🏡</span> Dashboard
-      </a>
+        <a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' %}active{% endif %}">
+          <span class="nav-icon">🏡</span> Dashboard
+        </a>
 
-      <div class="sidebar-divider">Members</div>
+        <div class="sidebar-divider">Business</div>
 
-      <a href="{{ url_for('add_member_form') }}"
-         class="{% if request.endpoint == 'add_member_form' %}active{% endif %}">
-        <span class="nav-icon">✨</span> Add Member
-      </a>
-      <a href="{{ url_for('view_members') }}"
-         class="{% if request.endpoint == 'view_members' %}active{% endif %}">
-        <span class="nav-icon">👥</span> Member Directory
-      </a>
+        <a href="{{ url_for('investments') }}" class="{% if request.endpoint == 'investments' %}active{% endif %}">
+          <span class="nav-icon">📈</span> Investments
+        </a>
 
-      <div class="sidebar-divider">Catalog</div>
+        <div class="sidebar-divider">Products</div>
 
-      <a href="{{ url_for('add_product_form') }}"
-         class="{% if request.endpoint == 'add_product_form' %}active{% endif %}">
-        <span class="nav-icon">🌸</span> Add Product
-      </a>
-      <a href="{{ url_for('catalog') }}"
-         class="{% if request.endpoint == 'catalog' %}active{% endif %}">
-        <span class="nav-icon">🧺</span> View Catalog
-      </a>
+        <a href="{{ url_for('add_product_form') }}"
+          class="{% if request.endpoint == 'add_product_form' %}active{% endif %}">
+          <span class="nav-icon">🌸</span> Add Product
+        </a>
+        <a href="{{ url_for('catalog') }}" class="{% if request.endpoint == 'catalog' %}active{% endif %}">
+          <span class="nav-icon">🧺</span> View Products
+        </a>
 
-      <div class="sidebar-divider">Orders</div>
+        <div class="sidebar-divider">Orders</div>
 
-      <a href="{{ url_for('order_form') }}"
-         class="{% if request.endpoint == 'order_form' %}active{% endif %}">
-        <span class="nav-icon">🛍️</span> Place Order
-      </a>
-      <a href="{{ url_for('view_orders') }}"
-         class="{% if request.endpoint == 'view_orders' %}active{% endif %}">
-        <span class="nav-icon">📋</span> Order Ledger
-      </a>
-    </nav>
+        <a href="{{ url_for('order_form') }}" class="{% if request.endpoint == 'order_form' %}active{% endif %}">
+          <span class="nav-icon">🛍️</span> Place Order
+        </a>
+        <a href="{{ url_for('view_orders') }}" class="{% if request.endpoint == 'view_orders' %}active{% endif %}">
+          <span class="nav-icon">📋</span> View Order
+        </a>
+      </nav>
 
-    <div class="sidebar-footer">
-      crafted with ❤️ &amp; yarn
-    </div>
-  </aside>
+      <div class="sidebar-footer">
+        crafted with ❤️ &amp; yarn
+      </div>
+    </aside>
 
-  <!-- Main Content -->
-  <main class="main-content">
+    <!-- Main Content -->
+    <main class="main-content">
 
-    <!-- Flash Messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
+      <!-- Flash Messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
-        <div class="flash-container">
-          {% for category, message in messages %}
-            <div class="flash {{ category }}">
-              {% if category == 'success' %}✿{% else %}⚠{% endif %}
-              {{ message }}
-            </div>
-          {% endfor %}
+      <div class="flash-container">
+        {% for category, message in messages %}
+        <div class="flash {{ category }}">
+          {% if category == 'success' %}✿{% else %}⚠{% endif %}
+          {{ message }}
         </div>
+        {% endfor %}
+      </div>
       {% endif %}
-    {% endwith %}
+      {% endwith %}
 
-    {% block content %}{% endblock %}
-  </main>
+      {% block content %}{% endblock %}
+    </main>
 
-</div>
+  </div>
 </body>
+
 </html>

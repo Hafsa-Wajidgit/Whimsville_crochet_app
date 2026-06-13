@@ -1,10 +1,19 @@
 import pymysql  # 1. Replaced sqlite3 with pymysql
 import re
+import os
 from datetime import datetime
 from flask import Flask, render_template, request, g, flash, redirect, url_for
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.secret_key = "whimsical_crochet_secret_key_2024"
+
+UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static', 'uploads')
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # 2. Database connection configuration details
 MYSQL_HOST = 'localhost'
@@ -82,138 +91,165 @@ def close_connection(exception):
     if db is not None:
         db.close()
 
-
-def init_db():
-    with app.app_context():
-        db = get_db()
-        db.executescript("""
-            CREATE TABLE IF NOT EXISTS users (
-                user_id   INTEGER PRIMARY KEY AUTOINCREMENT,
-                name      VARCHAR(100) NOT NULL,
-                email     VARCHAR(150) UNIQUE NOT NULL,
-                phone     VARCHAR(20)  NOT NULL,
-                address   TEXT         NOT NULL
-            );
-
-            CREATE TABLE IF NOT EXISTS products (
-                product_id  INTEGER PRIMARY KEY AUTOINCREMENT,
-                title       VARCHAR(150) NOT NULL,
-                description TEXT,
-                category    VARCHAR(100) NOT NULL,
-                price       REAL         NOT NULL,
-                quantity    INTEGER      NOT NULL,
-                available   INTEGER      NOT NULL
-            );
-
-            CREATE TABLE IF NOT EXISTS orders (
-                order_id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id          INTEGER NOT NULL REFERENCES users(user_id),
-                product_id       INTEGER NOT NULL REFERENCES products(product_id),
-                order_date       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                quantity_ordered INTEGER NOT NULL,
-                total_price      REAL    NOT NULL
-            );
-        """)
-
-        # Seed sample data if empty
-        cur = db.execute("SELECT COUNT(*) FROM products")
-        if cur.fetchone()[0] == 0:
-            db.executescript("""
-                INSERT INTO products (title, description, category, price, quantity, available) VALUES
-                ('Strawberry Plushie', 'A soft, chunky crocheted strawberry with a smiling face. Perfect for gifting!', 'Plushies', 18.00, 12, 12),
-                ('Cloud Bear Plushie', 'Dreamy pastel bear stuffed with love. Hand-finished with embroidered eyes.', 'Plushies', 22.50, 8, 8),
-                ('Floral Cardigan', 'Vintage-inspired open-front cardigan in blush pink with floral yoke detail.', 'Cardigans', 85.00, 5, 5),
-                ('Cottagecore Vest', 'Earthy tones, cropped fit. Great for layering over blouses.', 'Cardigans', 65.00, 4, 4),
-                ('Mug Cozy – Autumn', 'Keep your tea warm in this fall-themed mug sleeve with leaf motifs.', 'Cozies', 12.00, 20, 20),
-                ('Book Sleeve', 'A padded crochet sleeve to protect your favorite novel.', 'Cozies', 15.00, 10, 10);
-
-                INSERT INTO users (name, email, phone, address) VALUES
-                ('Rose Whitmore', 'rose@example.com', '555-0101', '12 Bluebell Lane, Cotswold, UK'),
-                ('Lily Fairfax',  'lily@example.com', '555-0202', '3 Primrose Ave, Bath, UK');
-            """)
-        db.commit()
-
-
 # ─── Dashboard ───────────────────────────────────────────────────────────────
 
 @app.route("/")
 def dashboard():
     db = get_db()
-    member_count  = db.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-    product_count = db.execute("SELECT COUNT(*) FROM products").fetchone()[0]
-    order_count   = db.execute("SELECT COUNT(*) FROM orders").fetchone()[0]
-    low_stock     = db.execute("SELECT COUNT(*) FROM products WHERE available <= 2").fetchone()[0]
-    recent_orders = db.execute("""
-        SELECT o.order_id, u.name, p.title, o.quantity_ordered, o.total_price, o.order_date
+
+    # Order status counts
+    pending_count     = db.execute("SELECT COUNT(*) FROM orders WHERE status = 'Pending'").fetchone()[0]
+    in_progress_count = db.execute("SELECT COUNT(*) FROM orders WHERE status = 'In Progress'").fetchone()[0]
+    completed_count   = db.execute("SELECT COUNT(*) FROM orders WHERE status = 'Completed'").fetchone()[0]
+
+    # Total revenue
+    rev_row = db.execute("SELECT SUM(total_price) FROM orders").fetchone()
+    total_revenue = float(rev_row[0]) if rev_row[0] else 0.0
+
+    # Total investment
+    inv_row = db.execute("SELECT SUM(amount) FROM investments").fetchone()
+    total_investment = float(inv_row[0]) if inv_row[0] else 0.0
+
+    # Total profit
+    total_profit = total_revenue - total_investment
+
+    # New orders today
+    new_orders_today = db.execute(
+        "SELECT COUNT(*) FROM orders WHERE DATE(order_date) = CURDATE()"
+    ).fetchone()[0]
+
+    # Best-selling product by quantity
+    best_seller = db.execute("""
+        SELECT p.title, SUM(o.quantity_ordered) AS total_sold
         FROM orders o
-        JOIN users u ON o.user_id = u.user_id
+        JOIN products p ON o.product_id = p.product_id
+        GROUP BY p.product_id, p.title
+        ORDER BY total_sold DESC LIMIT 1
+    """).fetchone()
+
+    # Recent 5 orders (using COALESCE for customer name)
+    recent_orders = db.execute("""
+        SELECT o.order_id, COALESCE(o.customer_name, u.name) AS name, p.title, 
+               o.quantity_ordered, o.total_price, o.order_date, o.status
+        FROM orders o
+        LEFT JOIN customers u ON o.customer_id = u.customer_id
         JOIN products p ON o.product_id = p.product_id
         ORDER BY o.order_date DESC LIMIT 5
     """).fetchall()
+
     return render_template("dashboard.html",
-        member_count=member_count,
-        product_count=product_count,
-        order_count=order_count,
-        low_stock=low_stock,
+        pending_count=pending_count,
+        in_progress_count=in_progress_count,
+        completed_count=completed_count,
+        total_revenue=total_revenue,
+        total_profit=total_profit,
+        new_orders_today=new_orders_today,
+        best_seller=best_seller,
         recent_orders=recent_orders)
 
+# ─── Investments ─────────────────────────────────────────────────────────────
 
-# ─── Members ─────────────────────────────────────────────────────────────────
-
-@app.route("/members", methods=["GET"])
-def view_members():
+@app.route("/investments", methods=["GET"])
+def investments():
     db = get_db()
-    members = db.execute("SELECT * FROM users ORDER BY name").fetchall()
-    return render_template("view_members.html", members=members)
+    
+    # Get all investments
+    inv_records = db.execute("SELECT * FROM investments ORDER BY date DESC").fetchall()
+    
+    # Total investment
+    inv_row = db.execute("SELECT SUM(amount) FROM investments").fetchone()
+    total_investment = float(inv_row[0]) if inv_row[0] else 0.0
+    
+    # Total revenue
+    rev_row = db.execute("SELECT SUM(total_price) FROM orders").fetchone()
+    total_revenue = float(rev_row[0]) if rev_row[0] else 0.0
+    
+    total_profit = total_revenue - total_investment
+    
+    return render_template("investments.html", 
+                           investments=inv_records, 
+                           total_investment=total_investment,
+                           total_revenue=total_revenue,
+                           total_profit=total_profit)
 
-
-@app.route("/members/add", methods=["GET"])
-def add_member_form():
-    return render_template("add_member.html")
-
-
-@app.route("/members", methods=["POST"])
-def create_member():
-    name    = request.form.get("name", "").strip()
-    email   = request.form.get("email", "").strip().lower()
-    phone   = request.form.get("phone", "").strip()
-    address = request.form.get("address", "").strip()
-
-    errors = []
-    if not name:    errors.append("Name is required.")
-    if not phone:   errors.append("Phone is required.")
-    if not address: errors.append("Address is required.")
-    if not email:
-        errors.append("Email is required.")
-    elif not re.match(r"^[\w\.\+\-]+@[\w\-]+\.[a-zA-Z]{2,}$", email):
-        errors.append("Please enter a valid email address.")
-
-    if errors:
-        for e in errors:
-            flash(e, "error")
-        return render_template("add_member.html",
-            prefill=dict(name=name, email=email, phone=phone, address=address))
-
+@app.route("/investments/add", methods=["POST"])
+def add_investment():
     db = get_db()
+    amount_raw = request.form.get("amount", "").strip()
+    description = request.form.get("description", "").strip()
+    
+    if not description:
+        flash("Description is required.", "error")
+        return redirect(url_for("investments"))
+        
     try:
-        existing = db.execute("SELECT user_id FROM users WHERE email = ?", (email,)).fetchone()
-        if existing:
-            flash("A member with that email already exists.", "error")
-            return render_template("add_member.html",
-                prefill=dict(name=name, email=email, phone=phone, address=address))
-
-        db.execute(
-            "INSERT INTO users (name, email, phone, address) VALUES (?, ?, ?, ?)",
-            (name, email, phone, address)
-        )
+        amount = float(amount_raw)
+        if amount <= 0:
+            flash("Investment amount must be greater than 0.", "error")
+            return redirect(url_for("investments"))
+    except ValueError:
+        flash("Amount must be a valid number.", "error")
+        return redirect(url_for("investments"))
+        
+    try:
+        db.execute("INSERT INTO investments (amount, description) VALUES (?, ?)", (amount, description))
         db.commit()
-        flash(f"Welcome, {name}! Member account created successfully. 🌸", "success")
-        return redirect(url_for("view_members"))
+        flash("Investment recorded successfully! 💸", "success")
     except Exception as ex:
         db.rollback()
         flash(f"Database error: {ex}", "error")
-        return render_template("add_member.html",
-            prefill=dict(name=name, email=email, phone=phone, address=address))
+        
+    return redirect(url_for("investments"))
+
+@app.route("/investments/delete/<int:iid>", methods=["POST"])
+def delete_investment(iid):
+    db = get_db()
+    try:
+        db.execute("DELETE FROM investments WHERE investment_id = ?", (iid,))
+        db.commit()
+        flash("Investment deleted successfully.", "success")
+    except Exception as ex:
+        db.rollback()
+        flash(f"Could not delete investment: {ex}", "error")
+    return redirect(url_for("investments"))
+
+@app.route("/investments/edit/<int:iid>", methods=["GET"])
+def edit_investment_form(iid):
+    db = get_db()
+    investment = db.execute("SELECT * FROM investments WHERE investment_id = ?", (iid,)).fetchone()
+    if not investment:
+        flash("Investment not found.", "error")
+        return redirect(url_for("investments"))
+    return render_template("edit_investment.html", investment=investment)
+
+@app.route("/investments/edit/<int:iid>", methods=["POST"])
+def update_investment(iid):
+    db = get_db()
+    amount_raw = request.form.get("amount", "").strip()
+    description = request.form.get("description", "").strip()
+    
+    if not description:
+        flash("Description is required.", "error")
+        return redirect(url_for("edit_investment_form", iid=iid))
+        
+    try:
+        amount = float(amount_raw)
+        if amount <= 0:
+            flash("Investment amount must be greater than 0.", "error")
+            return redirect(url_for("edit_investment_form", iid=iid))
+    except ValueError:
+        flash("Amount must be a valid number.", "error")
+        return redirect(url_for("edit_investment_form", iid=iid))
+        
+    try:
+        db.execute("UPDATE investments SET amount = ?, description = ? WHERE investment_id = ?", (amount, description, iid))
+        db.commit()
+        flash("Investment updated successfully! 💸", "success")
+    except Exception as ex:
+        db.rollback()
+        flash(f"Database error: {ex}", "error")
+        
+    return redirect(url_for("investments"))
 
 
 # ─── Products ────────────────────────────────────────────────────────────────
@@ -276,11 +312,20 @@ def create_product():
             prefill=dict(title=title, description=description,
                          category=category, price=price_raw, quantity=qty_raw))
 
+    # Handle optional image upload
+    image_path = None
+    file = request.files.get("image")
+    if file and file.filename and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(save_path)
+        image_path = f"uploads/{filename}"
+
     db = get_db()
     try:
         db.execute(
-            "INSERT INTO products (title, description, category, price, quantity, available) VALUES (?, ?, ?, ?, ?, ?)",
-            (title, description, category, price, quantity, quantity)
+            "INSERT INTO products (title, description, category, price, quantity, available, image_path) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (title, description, category, price, quantity, quantity, image_path)
         )
         db.commit()
         flash(f"'{title}' added to the catalog! ✨", "success")
@@ -337,13 +382,22 @@ def update_product(pid):
             flash(e, "error")
         return render_template("edit_product.html", product=product)
 
+    # Handle optional image upload (keep existing if none uploaded)
+    image_path = product.get("image_path")
+    file = request.files.get("image")
+    if file and file.filename and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(save_path)
+        image_path = f"uploads/{filename}"
+
     try:
         # Adjust available proportionally
         delta = quantity - product["quantity"]
         new_available = max(0, product["available"] + delta)
         db.execute(
-            "UPDATE products SET title=?, category=?, price=?, quantity=?, available=? WHERE product_id=?",
-            (title, category, price, quantity, new_available, pid)
+            "UPDATE products SET title=?, category=?, price=?, quantity=?, available=?, image_path=? WHERE product_id=?",
+            (title, category, price, quantity, new_available, image_path, pid)
         )
         db.commit()
         flash(f"'{title}' updated successfully! 🌷", "success")
@@ -377,10 +431,14 @@ def delete_product(pid):
 def view_orders():
     db = get_db()
     orders = db.execute("""
-        SELECT o.order_id, u.name AS customer, p.title AS product,
-               p.category, o.quantity_ordered, o.total_price, o.order_date
+        SELECT o.order_id, COALESCE(o.customer_name, u.name) AS customer, 
+               COALESCE(o.customer_email, u.email) AS customer_email,
+               COALESCE(o.customer_phone, u.phone) AS customer_phone,
+               COALESCE(o.customer_address, u.address) AS customer_address,
+               p.title AS product, p.category, o.quantity_ordered, o.total_price, 
+               o.order_date, o.status, o.payment_method
         FROM orders o
-        JOIN users u ON o.user_id = u.user_id
+        LEFT JOIN customers u ON o.customer_id = u.customer_id
         JOIN products p ON o.product_id = p.product_id
         ORDER BY o.order_date DESC
     """).fetchall()
@@ -390,25 +448,31 @@ def view_orders():
 @app.route("/orders/new", methods=["GET"])
 def order_form():
     db = get_db()
-    members  = db.execute("SELECT user_id, name FROM users ORDER BY name").fetchall()
     products = db.execute(
         "SELECT product_id, title, price, available FROM products WHERE available > 0 ORDER BY title"
     ).fetchall()
-    return render_template("order_form.html", members=members, products=products)
+    return render_template("order_form.html", products=products)
 
 
 @app.route("/orders/create", methods=["POST"])
 def create_order():
-    user_id_raw  = request.form.get("user_id", "").strip()
+    customer_name    = request.form.get("customer_name", "").strip()
+    customer_email   = request.form.get("customer_email", "").strip()
+    customer_phone   = request.form.get("customer_phone", "").strip()
+    customer_address = request.form.get("customer_address", "").strip()
+    payment_method   = request.form.get("payment_method", "Online").strip()
+    
     product_id_raw = request.form.get("product_id", "").strip()
     qty_raw      = request.form.get("quantity_ordered", "").strip()
 
     errors = []
-    try:
-        user_id = int(user_id_raw)
-    except:
-        errors.append("Please select a valid member.")
-        user_id = None
+    
+    if not customer_name: errors.append("Customer name is required.")
+    if not customer_email: errors.append("Customer email is required.")
+    if not customer_phone: errors.append("Customer phone is required.")
+    if not customer_address: errors.append("Customer address is required.")
+    if payment_method not in ["COD", "Online"]: errors.append("Invalid payment method.")
+
     try:
         product_id = int(product_id_raw)
     except:
@@ -422,7 +486,6 @@ def create_order():
         qty_ordered = 0
 
     db = get_db()
-    members  = db.execute("SELECT user_id, name FROM users ORDER BY name").fetchall()
     products = db.execute(
         "SELECT product_id, title, price, available FROM products WHERE available > 0 ORDER BY title"
     ).fetchall()
@@ -430,48 +493,197 @@ def create_order():
     if errors:
         for e in errors:
             flash(e, "error")
-        return render_template("order_form.html", members=members, products=products)
+        return render_template("order_form.html", products=products, 
+            customer_name=customer_name, customer_email=customer_email, 
+            customer_phone=customer_phone, customer_address=customer_address, 
+            payment_method=payment_method)
 
     try:
-        user = db.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
-        if not user:
-            flash("Selected member does not exist.", "error")
-            return render_template("order_form.html", members=members, products=products)
-
         product = db.execute("SELECT * FROM products WHERE product_id = ?", (product_id,)).fetchone()
         if not product:
             flash("Selected product does not exist.", "error")
-            return render_template("order_form.html", members=members, products=products)
+            return render_template("order_form.html", products=products)
 
         if product["available"] < qty_ordered:
-            flash(
-                f"Not enough stock! Only {product['available']} unit(s) of '{product['title']}' available.",
-                "error"
-            )
-            return render_template("order_form.html", members=members, products=products)
+            flash(f"Not enough stock! Only {product['available']} unit(s) available.", "error")
+            return render_template("order_form.html", products=products, 
+                customer_name=customer_name, customer_email=customer_email, 
+                customer_phone=customer_phone, customer_address=customer_address, 
+                payment_method=payment_method)
 
         total = round(product["price"] * qty_ordered, 2)
         db.execute(
-            "INSERT INTO orders (user_id, product_id, quantity_ordered, total_price) VALUES (?, ?, ?, ?)",
-            (user_id, product_id, qty_ordered, total)
+            """INSERT INTO orders (product_id, quantity_ordered, total_price, customer_name, customer_email, customer_phone, customer_address, payment_method) 
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (product_id, qty_ordered, total, customer_name, customer_email, customer_phone, customer_address, payment_method)
         )
-        db.execute(
-            "UPDATE products SET available = available - ? WHERE product_id = ?",
-            (qty_ordered, product_id)
-        )
+        db.execute("UPDATE products SET available = available - ? WHERE product_id = ?", (qty_ordered, product_id))
         db.commit()
-        flash(
-            f"Order placed for {user['name']}! {qty_ordered}× '{product['title']}' — £{total:.2f} 🛍️",
-            "success"
-        )
+        flash(f"Order placed for {customer_name}! {qty_ordered}× '{product['title']}' — PKR {total:.2f} 🛍️", "success")
         return redirect(url_for("view_orders"))
 
     except Exception as ex:
         db.rollback()
         flash(f"Transaction error: {ex}", "error")
-        return render_template("order_form.html", members=members, products=products)
+        return render_template("order_form.html", products=products, 
+            customer_name=customer_name, customer_email=customer_email, 
+            customer_phone=customer_phone, customer_address=customer_address, 
+            payment_method=payment_method)
 
+@app.route("/orders/update/<int:oid>", methods=["GET"])
+def edit_order_form(oid):
+    db = get_db()
+    order = db.execute("SELECT * FROM orders WHERE order_id = ?", (oid,)).fetchone()
+    if not order:
+        flash("Order not found.", "error")
+        return redirect(url_for("view_orders"))
+        
+    products = db.execute(
+        "SELECT product_id, title, price, available FROM products ORDER BY title"
+    ).fetchall()
+    
+    return render_template("edit_order.html", order=order, products=products)
+
+@app.route("/orders/update/<int:oid>", methods=["POST"])
+def update_order(oid):
+    db = get_db()
+    order = db.execute("SELECT * FROM orders WHERE order_id = ?", (oid,)).fetchone()
+    if not order:
+        flash("Order not found.", "error")
+        return redirect(url_for("view_orders"))
+
+    customer_name    = request.form.get("customer_name", "").strip()
+    customer_email   = request.form.get("customer_email", "").strip()
+    customer_phone   = request.form.get("customer_phone", "").strip()
+    customer_address = request.form.get("customer_address", "").strip()
+    payment_method   = request.form.get("payment_method", "Online").strip()
+    
+    product_id_raw = request.form.get("product_id", "").strip()
+    qty_raw      = request.form.get("quantity_ordered", "").strip()
+
+    errors = []
+    
+    if not customer_name: errors.append("Customer name is required.")
+    if not customer_email: errors.append("Customer email is required.")
+    if not customer_phone: errors.append("Customer phone is required.")
+    if not customer_address: errors.append("Customer address is required.")
+    if payment_method not in ["COD", "Online"]: errors.append("Invalid payment method.")
+
+    try:
+        product_id = int(product_id_raw)
+    except:
+        errors.append("Please select a valid product.")
+        product_id = None
+    try:
+        qty_ordered = int(qty_raw)
+        if qty_ordered <= 0: errors.append("Order quantity must be at least 1.")
+    except:
+        errors.append("Quantity must be a whole number.")
+        qty_ordered = 0
+
+    if errors:
+        for e in errors:
+            flash(e, "error")
+        return redirect(url_for("edit_order_form", oid=oid))
+
+    try:
+        product = db.execute("SELECT * FROM products WHERE product_id = ?", (product_id,)).fetchone()
+        if not product:
+            flash("Selected product does not exist.", "error")
+            return redirect(url_for("edit_order_form", oid=oid))
+
+        # Calculate difference in quantity to update product availability
+        old_product_id = order["product_id"]
+        old_qty = order["quantity_ordered"]
+        
+        if old_product_id == product_id:
+            qty_diff = qty_ordered - old_qty
+            if product["available"] < qty_diff:
+                flash(f"Not enough stock! Only {product['available']} unit(s) available.", "error")
+                return redirect(url_for("edit_order_form", oid=oid))
+            db.execute("UPDATE products SET available = available - ? WHERE product_id = ?", (qty_diff, product_id))
+        else:
+            # Different product selected, restore old stock, check new stock
+            old_product = db.execute("SELECT * FROM products WHERE product_id = ?", (old_product_id,)).fetchone()
+            if product["available"] < qty_ordered:
+                flash(f"Not enough stock! Only {product['available']} unit(s) available.", "error")
+                return redirect(url_for("edit_order_form", oid=oid))
+            
+            db.execute("UPDATE products SET available = available + ? WHERE product_id = ?", (old_qty, old_product_id))
+            db.execute("UPDATE products SET available = available - ? WHERE product_id = ?", (qty_ordered, product_id))
+
+        total = round(product["price"] * qty_ordered, 2)
+        db.execute(
+            """UPDATE orders 
+               SET product_id=?, quantity_ordered=?, total_price=?, 
+                   customer_name=?, customer_email=?, customer_phone=?, 
+                   customer_address=?, payment_method=?
+               WHERE order_id=?""",
+            (product_id, qty_ordered, total, customer_name, customer_email, customer_phone, customer_address, payment_method, oid)
+        )
+        db.commit()
+        flash(f"Order #{oid} updated successfully!", "success")
+        return redirect(url_for("view_orders"))
+
+    except Exception as ex:
+        db.rollback()
+        flash(f"Transaction error: {ex}", "error")
+        return redirect(url_for("edit_order_form", oid=oid))
+
+@app.route("/orders/delete/<int:oid>", methods=["POST"])
+def delete_order(oid):
+    db = get_db()
+    order = db.execute("SELECT * FROM orders WHERE order_id = ?", (oid,)).fetchone()
+    if not order:
+        flash("Order not found.", "error")
+        return redirect(url_for("view_orders"))
+    try:
+        db.execute("UPDATE products SET available = available + ? WHERE product_id = ?", (order["quantity_ordered"], order["product_id"]))
+        db.execute("DELETE FROM orders WHERE order_id = ?", (oid,))
+        db.commit()
+        flash(f"Order #{oid} deleted and stock restored.", "success")
+    except Exception as ex:
+        db.rollback()
+        flash(f"Could not delete order: {ex}", "error")
+    return redirect(url_for("view_orders"))
+
+@app.route("/orders/status/<int:oid>", methods=["POST"])
+def update_order_status(oid):
+    status = request.form.get("status", "Pending")
+    if status not in {"Pending", "In Progress", "Completed"}:
+        flash("Invalid status.", "error")
+        return redirect(url_for("view_orders"))
+    db = get_db()
+    try:
+        db.execute("UPDATE orders SET status = ? WHERE order_id = ?", (status, oid))
+        db.commit()
+        flash(f"Order #{oid} status updated to '{status}'.", "success")
+    except Exception as ex:
+        db.rollback()
+        flash(f"Could not update status: {ex}", "error")
+    return redirect(url_for("view_orders"))
+
+@app.route("/products/delete-image/<int:pid>", methods=["POST"])
+def delete_product_image(pid):
+    db = get_db()
+    product = db.execute("SELECT title, image_path FROM products WHERE product_id = ?", (pid,)).fetchone()
+    if not product:
+        flash("Product not found.", "error")
+        return redirect(url_for("catalog"))
+    try:
+        if product["image_path"]:
+            full_path = os.path.join(app.config["UPLOAD_FOLDER"], os.path.basename(product["image_path"]))
+            if os.path.exists(full_path):
+                os.remove(full_path)
+        db.execute("UPDATE products SET image_path = NULL WHERE product_id = ?", (pid,))
+        db.commit()
+        flash(f"Image for '{product['title']}' removed.", "success")
+    except Exception as ex:
+        db.rollback()
+        flash(f"Could not delete image: {ex}", "error")
+    return redirect(url_for("edit_product_form", pid=pid))
 
 if __name__ == "__main__":
     # init_db()
     app.run(debug=True)
+

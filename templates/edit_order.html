@@ -1,15 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Place Order{% endblock %}
+{% block title %}Edit Order{% endblock %}
 
 {% block content %}
 <div class="page-header">
-  <div class="breadcrumb">Orders <span>/ New Order</span></div>
-  <h1><span class="page-icon">🛍️</span> Place an Order</h1>
-  <p class="page-subtitle">Enter customer details, select a product, and choose a payment method to create a transaction.</p>
+  <div class="breadcrumb">Orders <span>/ Edit Order</span></div>
+  <h1><span class="page-icon">✏️</span> Edit Order #{{ order.order_id }}</h1>
+  <p class="page-subtitle">Update customer details, product, or payment method for this order.</p>
 </div>
 
 <div class="card form-section">
-  <form method="POST" action="{{ url_for('create_order') }}" id="orderForm">
+  <form method="POST" action="{{ url_for('update_order', oid=order.order_id) }}" id="orderForm">
     <div class="form-grid">
 
       <!-- ── Customer Details ── -->
@@ -19,22 +19,22 @@
 
       <div class="form-group">
         <label>Customer Name <span class="required">*</span></label>
-        <input type="text" name="customer_name" value="{{ customer_name or '' }}" required placeholder="e.g. Lily Fairfax">
+        <input type="text" name="customer_name" value="{{ request.form.get('customer_name', order.customer_name) }}" required>
       </div>
 
       <div class="form-group">
         <label>Email Address <span class="required">*</span></label>
-        <input type="email" name="customer_email" value="{{ customer_email or '' }}" required placeholder="e.g. lily@example.com">
+        <input type="email" name="customer_email" value="{{ request.form.get('customer_email', order.customer_email) }}" required>
       </div>
 
       <div class="form-group">
         <label>Phone Number <span class="required">*</span></label>
-        <input type="text" name="customer_phone" value="{{ customer_phone or '' }}" required placeholder="e.g. 555-0192">
+        <input type="text" name="customer_phone" value="{{ request.form.get('customer_phone', order.customer_phone) }}" required>
       </div>
 
       <div class="form-group full-width">
         <label>Shipping Address <span class="required">*</span></label>
-        <textarea name="customer_address" required rows="2" placeholder="Full street address">{{ customer_address or '' }}</textarea>
+        <textarea name="customer_address" required rows="2">{{ request.form.get('customer_address', order.customer_address) }}</textarea>
       </div>
 
       <!-- ── Order Details ── -->
@@ -45,39 +45,33 @@
       <div class="form-group full-width">
         <label>Product <span class="required">*</span></label>
         <select name="product_id" id="productSelect" required onchange="updatePreview()">
-          <option value="" disabled selected>— Choose a product —</option>
           {% for p in products %}
           <option value="{{ p.product_id }}"
                   data-price="{{ p.price }}"
-                  data-available="{{ p.available }}">
+                  data-available="{{ p.available }}"
+                  {% if p.product_id == order.product_id %}selected{% endif %}>
             {{ p.title }} — PKR {{ "%.2f"|format(p.price) }}
             ({{ p.available }} available)
           </option>
           {% endfor %}
         </select>
-        {% if not products %}
-        <p class="text-muted mt-1" style="font-size:0.8rem; color: #a05050;">
-          No in-stock products available.
-          <a href="{{ url_for('add_product_form') }}">Add stock first →</a>
-        </p>
-        {% endif %}
       </div>
 
       <div class="form-group">
         <label>Quantity <span class="required">*</span></label>
         <input type="number" name="quantity_ordered" id="qtyInput"
-               min="1" value="1" required oninput="updatePreview()">
+               min="1" value="{{ request.form.get('quantity_ordered', order.quantity_ordered) }}" required oninput="updatePreview()">
       </div>
 
       <div class="form-group">
         <label>Payment Method <span class="required">*</span></label>
         <div style="display: flex; gap: 16px; margin-top: 8px;">
           <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: normal;">
-            <input type="radio" name="payment_method" value="Online" {% if not payment_method or payment_method == 'Online' %}checked{% endif %}>
+            <input type="radio" name="payment_method" value="Online" {% if order.payment_method == 'Online' %}checked{% endif %}>
             Online
           </label>
           <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: normal;">
-            <input type="radio" name="payment_method" value="COD" {% if payment_method == 'COD' %}checked{% endif %}>
+            <input type="radio" name="payment_method" value="COD" {% if order.payment_method == 'COD' %}checked{% endif %}>
             Cash on Delivery (COD)
           </label>
         </div>
@@ -86,7 +80,7 @@
     </div>
 
     <!-- Live Order Summary -->
-    <div class="order-summary-preview" id="orderPreview">
+    <div class="order-summary-preview visible" id="orderPreview">
       <h4>✿ Order Summary</h4>
       <div class="order-summary-row">
         <span>Product</span>
@@ -107,9 +101,8 @@
     </div>
 
     <div class="form-actions">
-      <button type="submit" class="btn btn-primary"
-              {% if not products %}disabled style="opacity:0.5;"{% endif %}>
-        🛍️ Confirm Order
+      <button type="submit" class="btn btn-primary">
+        🛍️ Update Order
       </button>
       <a href="{{ url_for('view_orders') }}" class="btn btn-secondary">Cancel</a>
     </div>
@@ -128,7 +121,7 @@ function updatePreview() {
   }
 
   const price = parseFloat(opt.dataset.price);
-  const productName = opt.text.split(' — ')[0];
+  const productName = opt.text.split(' — ')[0].trim();
   const total = (price * qty).toFixed(2);
 
   document.getElementById('previewProduct').textContent = productName;
@@ -138,5 +131,8 @@ function updatePreview() {
 
   document.getElementById('orderPreview').classList.add('visible');
 }
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', updatePreview);
 </script>
 {% endblock %}

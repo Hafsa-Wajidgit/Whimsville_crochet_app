@@ -967,3 +967,275 @@ tbody td:last-child  { padding-right: 20px; text-align: right; }
   font-weight: 600;
   color: var(--blush-dark);
 }
+
+/* --- Product Card Image ---------------------------------------- */
+.product-card-image {
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(250,237,205,0.8), rgba(228,172,178,0.15));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid rgba(228,172,178,0.2);
+}
+
+.product-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.35s ease;
+}
+
+.product-card:hover .product-card-image img {
+  transform: scale(1.05);
+}
+
+.product-card-image-placeholder {
+  font-size: 3.5rem;
+  opacity: 0.35;
+  user-select: none;
+}
+
+/* --- Image Upload Area ----------------------------------------- */
+.image-upload-area {
+  position: relative;
+  border: 2px dashed rgba(228,172,178,0.55);
+  border-radius: var(--radius);
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  background: rgba(250,237,205,0.3);
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-upload-area:hover {
+  border-color: var(--pink);
+  background: rgba(228,172,178,0.08);
+}
+
+.image-upload-area input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+}
+
+.upload-placeholder p {
+  color: var(--ink-light);
+  font-size: 0.88rem;
+  margin-top: 6px;
+}
+
+/* --- Order Status Badges --------------------------------------- */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.status-pending {
+  background: rgba(234,188,168,0.3);
+  color: #a05c30;
+  border: 1px solid rgba(234,188,168,0.6);
+}
+
+.status-in-progress {
+  background: rgba(153,186,185,0.25);
+  color: #2a6a6a;
+  border: 1px solid rgba(153,186,185,0.55);
+}
+
+.status-completed {
+  background: rgba(204,213,174,0.35);
+  color: #3a5a30;
+  border: 1px solid rgba(204,213,174,0.65);
+}
+
+/* Compact status change dropdown in the orders table */
+.status-select {
+  font-size: 0.72rem;
+  padding: 3px 22px 3px 7px;
+  border: 1px solid rgba(228,172,178,0.4);
+  border-radius: 6px;
+  background: var(--white);
+  color: var(--ink-light);
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6' viewBox='0 0 8 6'%3E%3Cpath fill='%2399BAB9' d='M4 6L0 0h8z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  transition: border-color 0.2s;
+}
+
+.status-select:hover { border-color: var(--pink); }
+
+/* --- Edit Product Image Controls ------------------------------ */
+.current-image-wrap {
+  margin-bottom: 10px;
+}
+
+.current-img-thumb {
+  max-width: 220px;
+  max-height: 170px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 2px solid rgba(228,172,178,0.5);
+  display: block;
+  transition: opacity 0.3s;
+}
+
+/* Collapse the upload drag-zone until "Change Image" is clicked */
+.upload-collapsed {
+  max-height: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+}
+
+.image-upload-area {
+  max-height: 400px;
+  opacity: 1;
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+}
+
+/* --- Brand Logo in Sidebar ------------------------------------ */
+.brand-logo-link {
+  display: block;
+  text-decoration: none;
+}
+
+.brand-logo {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(228,172,178,0.5);
+  box-shadow: 0 4px 16px rgba(228,172,178,0.35);
+  display: block;
+  margin: 0 auto 8px;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.brand-logo:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 24px rgba(228,172,178,0.5);
+}
+
+/* --- Insights Grid (Revenue / New Orders / Best Seller / etc) -- */
+.insights-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.insight-card {
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 3px 14px var(--shadow-md);
+  border: 1.5px solid transparent;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.insight-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(228,172,178,0.28);
+}
+
+.revenue-card    { background: linear-gradient(135deg, rgba(204,213,174,0.3), rgba(204,213,174,0.1)); border-color: rgba(204,213,174,0.5); }
+.new-orders-card { background: linear-gradient(135deg, rgba(153,186,185,0.25), rgba(153,186,185,0.08)); border-color: rgba(153,186,185,0.4); }
+.bestseller-card { background: linear-gradient(135deg, rgba(234,188,168,0.3), rgba(234,188,168,0.1)); border-color: rgba(234,188,168,0.5); }
+.completed-card  { background: linear-gradient(135deg, rgba(228,172,178,0.25), rgba(228,172,178,0.08)); border-color: rgba(228,172,178,0.4); }
+
+.insight-icon {
+  font-size: 2rem;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.6);
+  flex-shrink: 0;
+}
+
+.insight-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-light);
+}
+
+.insight-value {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-top: 2px;
+}
+
+/* --- Order Status Breakdown Cards ----------------------------- */
+.status-breakdown-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.status-breakdown-card {
+  border-radius: var(--radius);
+  padding: 22px 16px;
+  text-align: center;
+  box-shadow: 0 3px 14px var(--shadow-md);
+  border: 1.5px solid transparent;
+  transition: transform 0.2s ease;
+}
+
+.status-breakdown-card:hover { transform: translateY(-2px); }
+
+.pending-card           { background: rgba(234,188,168,0.2); border-color: rgba(234,188,168,0.5); }
+.in-progress-card       { background: rgba(153,186,185,0.2); border-color: rgba(153,186,185,0.45); }
+.completed-breakdown-card { background: rgba(204,213,174,0.25); border-color: rgba(204,213,174,0.55); }
+
+.status-breakdown-icon   { font-size: 2rem; margin-bottom: 6px; }
+.status-breakdown-number {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.status-breakdown-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-light);
+  margin-top: 4px;
+}
+
+.mt-3 { margin-top: 28px; }

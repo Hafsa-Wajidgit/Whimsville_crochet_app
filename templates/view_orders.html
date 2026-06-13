@@ -23,20 +23,62 @@
         <th>Product</th>
         <th>Category</th>
         <th>Qty</th>
+        <th>Payment</th>
         <th>Total</th>
+        <th>Status</th>
         <th>Date</th>
+        <th style="text-align:right;">Actions</th>
       </tr>
     </thead>
     <tbody>
       {% for o in orders %}
       <tr>
         <td><span class="id-chip">#{{ o.order_id }}</span></td>
-        <td><strong>{{ o.customer }}</strong></td>
+        <td>
+          <strong>{{ o.customer }}</strong>
+          <details style="font-size: 0.8rem; margin-top: 4px;">
+            <summary style="cursor: pointer; color: var(--primary-color);">View Details</summary>
+            <div style="margin-top: 4px; color: var(--text-dark, #555);">
+              <div style="margin-bottom:2px;">📧 {{ o.customer_email or 'N/A' }}</div>
+              <div style="margin-bottom:2px;">📞 {{ o.customer_phone or 'N/A' }}</div>
+              <div>🏠 {{ o.customer_address or 'N/A' }}</div>
+            </div>
+          </details>
+        </td>
         <td>{{ o.product }}</td>
         <td><span class="badge badge-pink">{{ o.category }}</span></td>
         <td>{{ o.quantity_ordered }}</td>
-        <td class="price-tag">£{{ "%.2f"|format(o.total_price) }}</td>
+        <td><span class="badge badge-sand" style="font-size:0.7rem;">{{ o.payment_method or 'Online' }}</span></td>
+        <td class="price-tag">PKR {{ "%.2f"|format(o.total_price) }}</td>
+
+        <!-- Status badge + dropdown -->
+        <td>
+          <form method="POST" action="{{ url_for('update_order_status', oid=o.order_id) }}" style="display:flex; align-items:center; gap:6px;">
+            <span class="status-badge status-{{ o.status | lower | replace(' ', '-') }}">
+              {% if o.status == 'Pending' %}⏳
+              {% elif o.status == 'In Progress' %}🔄
+              {% else %}✅
+              {% endif %}
+              {{ o.status }}
+            </span>
+            <select name="status" class="status-select" onchange="this.form.submit()" title="Change status">
+              <option value="Pending"     {% if o.status == 'Pending'     %}selected{% endif %}>⏳ Pending</option>
+              <option value="In Progress" {% if o.status == 'In Progress' %}selected{% endif %}>🔄 In Progress</option>
+              <option value="Completed"   {% if o.status == 'Completed'   %}selected{% endif %}>✅ Completed</option>
+            </select>
+          </form>
+        </td>
+
         <td class="text-muted">{{ o.order_date[:16] }}</td>
+
+        <!-- Edit & Delete buttons -->
+        <td style="text-align:right;">
+          <a href="{{ url_for('edit_order_form', oid=o.order_id) }}" class="btn btn-secondary btn-sm" style="margin-right: 4px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; gap: 4px; text-decoration: none;">✏️ Edit</a>
+          <form method="POST" action="{{ url_for('delete_order', oid=o.order_id) }}" style="display:inline;"
+                onsubmit="return confirm('Delete Order #{{ o.order_id }}? Stock will be restored.')">
+            <button type="submit" class="btn btn-danger btn-sm">🗑 Delete</button>
+          </form>
+        </td>
       </tr>
       {% endfor %}
     </tbody>
@@ -48,7 +90,7 @@
 <div style="text-align: right; margin-top: 14px; padding-right: 8px;">
   <span class="text-muted" style="font-size:0.85rem;">Total Revenue: </span>
   <span style="font-family: 'Playfair Display', serif; font-size: 1.3rem; font-weight: 700; color: var(--blush-dark);">
-    £{{ "%.2f"|format(total_revenue) }}
+    PKR {{ "%.2f"|format(total_revenue) }}
   </span>
 </div>
 

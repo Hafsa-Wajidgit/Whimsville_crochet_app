@@ -2,53 +2,104 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-<!-- Hero -->
+
+<!-- ── Hero ── -->
 <div class="dashboard-hero">
-  <h1>Good day, dear maker ✿</h1>
-  <p>Here is your business at a glance — every stitch, every smile, every sale.</p>
+  <h1>In Whimsville, ✿</h1>
+  <p>fairies and nymphs were supposed to keep all magic hidden but they got clumsy.
+    One night, a basket of enchanted yarn slipped through a portal into the human world.
+    That yarn became Whimsville — every piece is what happens when lost magic gets stitched into something real.</p>
 </div>
 
-<!-- Stats -->
-<div class="stats-grid">
-  <div class="stat-card">
-    <div class="stat-icon pink-bg">👥</div>
-    <div class="stat-info">
-      <div class="stat-number">{{ member_count }}</div>
-      <div class="stat-label">Members</div>
+<!-- ── Business Insights Row ── -->
+<div class="insights-grid">
+
+  <!-- Revenue Card -->
+  <div class="insight-card revenue-card">
+    <div class="insight-icon">💰</div>
+    <div class="insight-body">
+      <div class="insight-label">Total Revenue Earned</div>
+      <div class="insight-value">PKR {{ "%.2f"|format(total_revenue) }}</div>
     </div>
   </div>
-  <div class="stat-card">
-    <div class="stat-icon sand-bg">🧶</div>
-    <div class="stat-info">
-      <div class="stat-number">{{ product_count }}</div>
-      <div class="stat-label">Products</div>
+
+  <!-- Profit Card -->
+  <div class="insight-card profit-card" style="border-left: 4px solid var(--accent-color);">
+    <div class="insight-icon">📈</div>
+    <div class="insight-body">
+      <div class="insight-label">Total Profit</div>
+      <div class="insight-value"
+        style="color: {% if total_profit < 0 %}#e74c3c{% else %}var(--primary-color){% endif %};">
+        PKR {{ "%.2f"|format(total_profit) }}
+      </div>
     </div>
   </div>
-  <div class="stat-card">
-    <div class="stat-icon green-bg">🛍️</div>
-    <div class="stat-info">
-      <div class="stat-number">{{ order_count }}</div>
-      <div class="stat-label">Orders</div>
+
+  <!-- New Orders Today -->
+  <div class="insight-card new-orders-card">
+    <div class="insight-icon">🆕</div>
+    <div class="insight-body">
+      <div class="insight-label">New Orders Today</div>
+      <div class="insight-value">{{ new_orders_today }}</div>
     </div>
   </div>
-  <div class="stat-card">
-    <div class="stat-icon ash-bg">⚠️</div>
-    <div class="stat-info">
-      <div class="stat-number">{{ low_stock }}</div>
-      <div class="stat-label">Low Stock</div>
+
+  <!-- Best Seller -->
+  <div class="insight-card bestseller-card">
+    <div class="insight-icon">⭐</div>
+    <div class="insight-body">
+      <div class="insight-label">Best Seller</div>
+      <div class="insight-value" style="font-size:1rem;">
+        {% if best_seller %}
+        {{ best_seller.title }}
+        <span class="text-muted" style="font-size:0.78rem; display:block;">{{ best_seller.total_sold }} units
+          sold</span>
+        {% else %}
+        —
+        {% endif %}
+      </div>
     </div>
+  </div>
+
+  <!-- Completed Orders -->
+  <div class="insight-card completed-card">
+    <div class="insight-icon">✅</div>
+    <div class="insight-body">
+      <div class="insight-label">Completed Orders</div>
+      <div class="insight-value">{{ completed_count }}</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Order Status Breakdown ── -->
+<div class="section-header mt-3">
+  <h2>Order Status</h2>
+  <a href="{{ url_for('view_orders') }}" class="btn btn-secondary btn-sm">Manage →</a>
+</div>
+<div class="status-breakdown-grid">
+  <div class="status-breakdown-card pending-card">
+    <div class="status-breakdown-icon">⏳</div>
+    <div class="status-breakdown-number">{{ pending_count }}</div>
+    <div class="status-breakdown-label">Pending</div>
+  </div>
+  <div class="status-breakdown-card in-progress-card">
+    <div class="status-breakdown-icon">🔄</div>
+    <div class="status-breakdown-number">{{ in_progress_count }}</div>
+    <div class="status-breakdown-label">In Progress</div>
+  </div>
+  <div class="status-breakdown-card completed-breakdown-card">
+    <div class="status-breakdown-icon">✅</div>
+    <div class="status-breakdown-number">{{ completed_count }}</div>
+    <div class="status-breakdown-label">Completed</div>
   </div>
 </div>
 
-<!-- Quick Actions -->
-<div class="section-header">
+<!-- ── Quick Actions ── -->
+<div class="section-header mt-3">
   <h2>Quick Actions</h2>
 </div>
 <div class="quick-actions mb-3">
-  <a href="{{ url_for('add_member_form') }}" class="quick-action-card">
-    <span class="qa-icon">✨</span>
-    <span class="qa-label">Add Member</span>
-  </a>
   <a href="{{ url_for('add_product_form') }}" class="quick-action-card">
     <span class="qa-icon">🌸</span>
     <span class="qa-label">Add Product</span>
@@ -61,17 +112,13 @@
     <span class="qa-icon">🧺</span>
     <span class="qa-label">View Catalog</span>
   </a>
-  <a href="{{ url_for('view_members') }}" class="quick-action-card">
-    <span class="qa-icon">📖</span>
-    <span class="qa-label">Directory</span>
-  </a>
   <a href="{{ url_for('view_orders') }}" class="quick-action-card">
     <span class="qa-icon">📋</span>
     <span class="qa-label">Order Ledger</span>
   </a>
 </div>
 
-<!-- Recent Orders -->
+<!-- ── Recent Orders ── -->
 <div class="section-header">
   <h2>Recent Orders</h2>
   <a href="{{ url_for('view_orders') }}" class="btn btn-secondary btn-sm">View all →</a>
@@ -87,6 +134,7 @@
         <th>Product</th>
         <th>Qty</th>
         <th>Total</th>
+        <th>Status</th>
         <th>Date</th>
       </tr>
     </thead>
@@ -97,7 +145,15 @@
         <td>{{ o.name }}</td>
         <td>{{ o.title }}</td>
         <td>{{ o.quantity_ordered }}</td>
-        <td class="price-tag">£{{ "%.2f"|format(o.total_price) }}</td>
+        <td class="price-tag">PKR {{ "%.2f"|format(o.total_price) }}</td>
+        <td>
+          <span class="status-badge status-{{ o.status | lower | replace(' ', '-') }}">
+            {% if o.status == 'Pending' %}⏳
+            {% elif o.status == 'In Progress' %}🔄
+            {% else %}✅{% endif %}
+            {{ o.status }}
+          </span>
+        </td>
         <td class="text-muted">{{ o.order_date[:16] }}</td>
       </tr>
       {% endfor %}

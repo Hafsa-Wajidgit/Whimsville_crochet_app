@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Catalog{% endblock %}
+{% block title %}Products{% endblock %}
 
 {% block content %}
 <div class="page-header">
-  <div class="breadcrumb">Catalog <span>/ All Products</span></div>
+  <div class="breadcrumb">Products <span>/ All Products</span></div>
   <h1><span class="page-icon">🧺</span> Product Catalog</h1>
   <p class="page-subtitle">Every handmade item, lovingly catalogued.</p>
 </div>
@@ -13,14 +13,13 @@
   <div class="search-bar-wrapper">
     <div class="search-input-group">
       <span class="search-icon">🔍</span>
-      <input type="text" name="q" value="{{ query }}"
-             placeholder="Search by title, category, or description…"
-             id="searchInput">
+      <input type="text" name="q" value="{{ query }}" placeholder="Search by title, category, or description…"
+        id="searchInput">
     </div>
     <select name="sort" class="sort-select" onchange="this.form.submit()">
-      <option value="title"    {% if sort == 'title'    %}selected{% endif %}>Sort: Title</option>
-      <option value="category" {% if sort == 'category' %}selected{% endif %}>Sort: Category</option>
-      <option value="price"    {% if sort == 'price'    %}selected{% endif %}>Sort: Price</option>
+      <option value="title" {% if sort=='title' %}selected{% endif %}>Sort: Title</option>
+      <option value="category" {% if sort=='category' %}selected{% endif %}>Sort: Category</option>
+      <option value="price" {% if sort=='price' %}selected{% endif %}>Sort: Price</option>
     </select>
     <button type="submit" class="btn btn-ash btn-sm">Search</button>
     {% if query %}
@@ -41,6 +40,13 @@
 <div class="product-grid">
   {% for p in products %}
   <div class="product-card">
+    <div class="product-card-image">
+      {% if p.image_path %}
+      <img src="{{ url_for('static', filename=p.image_path) }}" alt="{{ p.title }}">
+      {% else %}
+      <div class="product-card-image-placeholder">🧶</div>
+      {% endif %}
+    </div>
     <div class="product-card-header">
       <div class="product-meta">
         <span class="badge badge-pink">{{ p.category }}</span>
@@ -55,15 +61,14 @@
       {% endif %}
 
       <div class="product-meta">
-        <span class="product-price">£{{ "%.2f"|format(p.price) }}</span>
+        <span class="product-price">PKR {{ "%.2f"|format(p.price) }}</span>
         <span>
           {% if p.available == 0 %}
-            <span class="badge badge-red">Out of Stock</span>
-          {% elif p.available <= 2 %}
-            <span class="badge badge-sand">Low — {{ p.available }} left</span>
-          {% else %}
-            <span class="badge badge-green">{{ p.available }} available</span>
-          {% endif %}
+          <span class="badge badge-red">Out of Stock</span>
+          {% elif p.available <= 2 %} <span class="badge badge-sand">Low — {{ p.available }} left</span>
+        {% else %}
+        <span class="badge badge-green">{{ p.available }} available</span>
+        {% endif %}
         </span>
       </div>
 
@@ -73,12 +78,9 @@
     </div>
 
     <div class="product-card-actions">
-      <a href="{{ url_for('edit_product_form', pid=p.product_id) }}"
-         class="btn btn-secondary btn-sm">✏ Edit</a>
-      <form method="POST"
-            action="{{ url_for('delete_product', pid=p.product_id) }}"
-            style="display:inline;"
-            onsubmit="return confirm('Are you sure you want to delete \'{{ p.title }}\'? This cannot be undone.')">
+      <a href="{{ url_for('edit_product_form', pid=p.product_id) }}" class="btn btn-secondary btn-sm">✏ Edit</a>
+      <form method="POST" action="{{ url_for('delete_product', pid=p.product_id) }}" style="display:inline;"
+        onsubmit="return confirm('Are you sure you want to delete \'{{ p.title }}\'? This cannot be undone.')">
         <button type="submit" class="btn btn-danger btn-sm">🗑 Delete</button>
       </form>
     </div>
@@ -93,10 +95,10 @@
     <h3>No products found</h3>
     <p>
       {% if query %}
-        Try a different search term or
-        <a href="{{ url_for('catalog') }}">clear the filter</a>.
+      Try a different search term or
+      <a href="{{ url_for('catalog') }}">clear the filter</a>.
       {% else %}
-        Add your first handmade item to the catalog.
+      Add your first handmade item to the catalog.
       {% endif %}
     </p>
     {% if not query %}
